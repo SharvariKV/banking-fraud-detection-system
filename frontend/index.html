@@ -98,6 +98,8 @@
 
 <script>
 
+const BASE_URL = "https://banking-fraud-detection-system-mwlt.onrender.com";
+
 let fraudCount = 0;
 let legitCount = 0;
 let chart;
@@ -114,19 +116,11 @@ function loadChart() {
                 label: 'Transactions',
                 data: [0, 0]
             }]
-        },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { stepSize: 1 }
-                }
-            }
         }
     });
 }
 
-// 🔹 RESET FUNCTION (IMPORTANT)
+// Reset
 function resetData() {
     fraudCount = 0;
     legitCount = 0;
@@ -138,7 +132,7 @@ function resetData() {
     document.getElementById("history").innerHTML = "";
 }
 
-// Update chart + stats
+// Update chart
 function updateChart(isFraud) {
     if (isFraud) fraudCount++;
     else legitCount++;
@@ -154,7 +148,7 @@ function updateChart(isFraud) {
         `Legit: ${legitPer}% | Fraud: ${fraudPer}%`;
 }
 
-// Add history
+// History
 function addHistory(amount, time, profession, result) {
     let row = `<tr>
         <td>${amount}</td>
@@ -173,7 +167,6 @@ function checkFraud() {
         return;
     }
 
-    // ✅ RESET OLD DATA
     resetData();
 
     let amount = parseFloat(document.getElementById("amount").value);
@@ -184,7 +177,7 @@ function checkFraud() {
     features[0] = time;
     features[1] = amount;
 
-    fetch("http://127.0.0.1:5000/predict", {
+    fetch(`${BASE_URL}/predict`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
@@ -209,7 +202,7 @@ function checkFraud() {
 
 // Login
 function login() {
-    fetch("http://127.0.0.1:5000/login", {
+    fetch(`${BASE_URL}/login`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
@@ -230,7 +223,7 @@ function login() {
 
 // Register
 function register() {
-    fetch("http://127.0.0.1:5000/register", {
+    fetch(`${BASE_URL}/register`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
