@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fraud Detection</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: Arial;
+            background: #f4f6f9;
+            text-align: center;
+            padding: 50px;
+        }
+        .box {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 420px;
+            margin: auto;
+            box-shadow: 0px 0px 10px gray;
+        }
+        input, select {
+            width: 90%;
+            padding: 10px;
+            margin: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            background: blue;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin: 5px;
+        }
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid gray;
+            padding: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="box">
+    <h2>💳 Fraud Detection System</h2>
+
+    <!-- LOGIN -->
+    <input id="username" placeholder="Username">
+    <input id="password" type="password" placeholder="Password">
+
+    <button onclick="login()">Login</button>
+    <button onclick="register()">Register</button>
+
+    <hr>
+
+    <!-- FRAUD INPUT -->
+    <input id="amount" placeholder="Amount">
+    <input id="time" placeholder="Time">
+
+    <!-- PROFESSION -->
+    <select id="profession">
+        <option value="farmer">Farmer</option>
+        <option value="business">Businessman</option>
+        <option value="student">Student</option>
+        <option value="employee">Employee</option>
+    </select>
+
+    <button onclick="checkFraud()">Check Fraud</button>
+
+    <p id="result"></p>
+
+    <!-- STATS -->
+    <h3>Statistics</h3>
+    <p id="stats">Legit: 0% | Fraud: 0%</p>
+
+    <!-- CHART -->
+    <canvas id="chart"></canvas>
+
+    <!-- HISTORY -->
+    <h3>Transaction History</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Amount</th>
+                <th>Time</th>
+                <th>Profession</th>
+                <th>Result</th>
+            </tr>
+        </thead>
+        <tbody id="history"></tbody>
+    </table>
+</div>
+
+<script>
+
+let fraudCount = 0;
+let legitCount = 0;
+let chart;
+
+// Load chart
+function loadChart() {
+    const ctx = document.getElementById('chart').getContext('2d');
+
+    chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Legit', 'Fraud'],
+            datasets: [{
+                label: 'Transactions',
+                data: [0, 0]
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1 }
+                }
+            }
+        }
+    });
+}
+
+// 🔹 RESET FUNCTION (IMPORTANT)
+function resetData() {
+    fraudCount = 0;
+    legitCount = 0;
+
+    chart.data.datasets[0].data = [0, 0];
+    chart.update();
+
+    document.getElementById("stats").innerText = "Legit: 0% | Fraud: 0%";
+    document.getElementById("history").innerHTML = "";
+}
+
+// Update chart + stats
+function updateChart(isFraud) {
+    if (isFraud) fraudCount++;
+    else legitCount++;
+
+    chart.data.datasets[0].data = [legitCount, fraudCount];
+    chart.update();
+
+    let total = fraudCount + legitCount;
+    let fraudPer = ((fraudCount / total) * 100).toFixed(1);
+    let legitPer = ((legitCount / total) * 100).toFixed(1);
+
+    document.getElementById("stats").innerText =
+        `Legit: ${legitPer}% | Fraud: ${fraudPer}%`;
+}
+
+// Add history
+function addHistory(amount, time, profession, result) {
+    let row = `<tr>
+        <td>${amount}</td>
+        <td>${time}</td>
+        <td>${profession}</td>
+        <td>${result}</td>
+    </tr>`;
+    document.getElementById("history").innerHTML += row;
+}
+
+// Fraud check
+function checkFraud() {
+
+    if (localStorage.getItem("loggedIn") !== "true") {
+        alert("Please login first");
+        return;
+    }
+
+    // ✅ RESET OLD DATA
+    resetData();
+
+    let amount = parseFloat(document.getElementById("amount").value);
+    let time = parseFloat(document.getElementById("time").value);
+    let profession = document.getElementById("profession").value;
+
+    let features = new Array(30).fill(0);
+    features[0] = time;
+    features[1] = amount;
+
+    fetch("http://127.0.0.1:5000/predict", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            features: features,
+            profession: profession
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.fraud === 1) {
+            document.getElementById("result").innerText = "❌ Fraud";
+            updateChart(true);
+            addHistory(amount, time, profession, "Fraud");
+        } else {
+            document.getElementById("result").innerText = "✅ Legit";
+            updateChart(false);
+            addHistory(amount, time, profession, "Legit");
+        }
+    })
+    .catch(err => alert("Error: " + err));
+}
+
+// Login
+function login() {
+    fetch("http://127.0.0.1:5000/login", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            username: document.getElementById("username").value,
+            password: document.getElementById("password").value
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === "success") {
+            alert("Login Successful");
+            localStorage.setItem("loggedIn", "true");
+        } else {
+            alert("Login Failed");
+        }
+    });
+}
+
+// Register
+function register() {
+    fetch("http://127.0.0.1:5000/register", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            username: document.getElementById("username").value,
+            password: document.getElementById("password").value
+        })
+    })
+    .then(res => res.json())
+    .then(data => alert(data.message));
+}
+
+window.onload = loadChart;
+
+</script>
+
+</body>
+</html>
